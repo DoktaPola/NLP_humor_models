@@ -3,6 +3,15 @@ import re
 import unidecode
 import contractions
 from collections import Counter
+import os
+import torch
+import numpy as np
+import src.schema as S
+import tqdm
+from src.plot_cm import plot_confusion_matrix
+from sklearn import metrics
+import matplotlib.pyplot as plt
+import src.config as CONF
 
 
 # Removal of html tags
@@ -59,3 +68,236 @@ def count_words(text, top=10):
 def remove_numbers(inp):
     input_str = re.sub(r'\d+', "", inp)
     return input_str
+
+
+# Save model or checkpoint
+def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
+    print("Saving model and optimizer state at iteration {} to {}".format(
+        iteration, filepath))
+
+    model_state_dict = model.state_dict().copy()
+
+    torch.save({'iteration': iteration,
+                'state_dict': model_state_dict,
+                'optimizer': optimizer.state_dict(),
+                'learning_rate': learning_rate}, filepath)
+
+
+# Load model or checkpoint
+def load_checkpoint(checkpoint_path, model, optimizer):
+    assert os.path.isfile(checkpoint_path)
+    print("Loading checkpoint '{}'".format(checkpoint_path))
+    checkpoint_dict = torch.load(checkpoint_path, map_location='cpu')
+
+    model.load_state_dict(checkpoint_dict['state_dict'])
+    optimizer.load_state_dict(checkpoint_dict['optimizer'])
+    learning_rate = checkpoint_dict['learning_rate']
+    iteration = checkpoint_dict['iteration']
+    print("Loaded checkpoint '{}' from iteration {}".format(
+        checkpoint_path, iteration))
+    return model, optimizer, learning_rate, iteration
+
+
+#########################################
+def as_matrix(convertor, sequences, max_len=20):
+    """ Convert a list of tokens into a matrix with padding """
+    if isinstance(sequences[0], str):
+        sequences = list(map(str.split, sequences))
+
+    max_len = min(max(map(len, sequences)), max_len or float('inf'))
+
+    UNK_IX, PAD_IX = convertor.get_unk_pad_ix()
+
+    matrix = np.full((len(sequences), max_len), np.int32(PAD_IX))
+    for i, seq in enumerate(sequences):
+        token_to_id = convertor.get_token_to_id()
+        row_ix = [token_to_id.get(word, UNK_IX) for word in seq[:max_len]]
+        matrix[i, :len(row_ix)] = row_ix
+
+    return matrix
+
+
+def to_tensors(batch, device):
+    batch_tensors = dict()
+    for key, arr in batch.items():
+        if key in [S.JOKE]:
+            batch_tensors[key] = torch.tensor(arr, device=device, dtype=torch.int64)
+        else:
+            batch_tensors[key] = torch.tensor(arr, device=device)  # dtype=torch.float64
+    return batch_tensors
+
+
+def make_batch(convertor, data, max_len=None,
+               word_dropout=0, device=torch.device('cpu')):
+    """
+    Creates a keras-friendly dict from the batch data.
+    :param word_dropout: replaces token index with UNK_IX with this probability
+    :returns: a dict with {'title' : int64[batch, title_max_len]
+    """
+    batch = {S.JOKE: as_matrix(convertor, data[S.JOKE].values, max_len)}
+
+    if word_dropout != 0:
+        batch[S.JOKE] = apply_word_dropout(batch[S.JOKE], 1. - word_dropout)
+
+    if S.TARGET in data.columns:
+        batch[S.TARGET] = data[S.TARGET].values
+
+    return to_tensors(batch, device)
+
+
+def apply_word_dropout(matrix, keep_prop,
+                       replace_with,
+                       pad_ix, ):
+    dropout_mask = np.random.choice(2, np.shape(matrix), p=[keep_prop, 1 - keep_prop])
+    dropout_mask &= matrix != pad_ix
+    return np.choose(dropout_mask, [matrix, np.full_like(matrix, replace_with)])
+
+
+def iterate_minibatches(convertor, data, batch_size=256,
+                        shuffle=True, cycle=False, **kwargs):
+    """ iterates minibatches of data in random order """
+    while True:
+        indices = np.arange(len(data))
+        if shuffle:
+            indices = np.random.permutation(indices)
+
+        for start in range(0, len(indices), batch_size):
+            batch = make_batch(convertor, data.iloc[indices[start: start + batch_size]], **kwargs)
+            yield batch
+
+        if not cycle: break
+
+
+def train(convertor, model,
+          optimizer, criterion,
+          data_train, data_val,
+          batch_size=128,
+          epochs=100, iter_per_validation=50,
+          early_stopping=False,
+          checkpoint_path="./best_checkpoint",
+          save_by="accuracy",
+          device=CONF.DEVICE, **kw):
+    count = 0
+    patience = 5
+
+    iteration = 0
+    loss_list = []
+    iteration_list = []
+    accuracy_list = []
+
+    best_score = None
+
+    for epoch in range(epochs):
+        print(f"Epoch {epoch}")
+
+        # for vec, vlen, labels in train_loader:
+        for i, batch in tqdm.notebook.tqdm(
+                enumerate(iterate_minibatches(
+                    convertor,
+                    data_train,
+                    batch_size=batch_size,
+                    device=CONF.DEVICE)),
+                total=len(data_train) // batch_size
+        ):
+            model.train()
+            # Clear gradients
+            optimizer.zero_grad()
+
+            # Forward propagation
+            outputs = model(batch)
+
+            # Calculate softmax and ross entropy loss
+            loss = criterion(outputs, batch[S.TARGET])
+
+            # Calculating gradients
+            loss.backward()
+
+            # Update parameters
+            optimizer.step()
+
+            iteration += 1
+
+            if iteration % iter_per_validation == 99:
+                model.eval()
+                with torch.no_grad():
+                    # Calculate Accuracy
+                    correct = 0
+                    total = 0
+
+                    for i, batch in enumerate(iterate_minibatches(
+                            convertor,
+                            data_val,
+                            batch_size=batch_size,
+                            device=CONF.DEVICE)):
+                        # Forward propagation
+                        outputs = model(batch)
+
+                        # Get predictions from the maximum value
+                        predicted = torch.max(outputs.data, 1)[1]
+
+                        # Total number of labels
+                        total += len(batch[S.TARGET])
+
+                        correct += (predicted == batch[S.TARGET]).sum()
+
+                    accuracy = 100 * correct / float(total)
+
+                    # store loss and iteration
+                    loss_list.append(loss.data.detach().cpu().numpy())
+                    iteration_list.append(iteration)
+                    accuracy_list.append(accuracy.detach().cpu().numpy())
+                    print('Iteration: {}  Loss: {}  Accuracy: {} %'.format(iteration, loss.data, accuracy))
+
+                    # save if we have best model state
+                    ref_score = accuracy if save_by == "accuracy" else loss.data
+                    compare = (lambda x, y: x > y) if save_by == "accuracy" else (lambda x, y: x < y)
+                    if best_score is None or compare(ref_score, best_score):
+                        best_score = ref_score
+                        save_checkpoint(model, optimizer,
+                                        optimizer.state_dict()['param_groups'][0]['lr'],
+                                        iteration, checkpoint_path)
+
+                    # Early stopping if the current valid_loss is greater than the last three valid losses
+                    if early_stopping == True:
+                        if len(accuracy_list) > 3 and all(accuracy >= acc for acc in accuracy_list[-4:]):
+                            print('Stopping early')
+                            break
+
+    return iteration_list, loss_list, accuracy_list
+
+
+def draw_visualization(iteration_list, loss_list, accuracy_list):
+    # visualization loss
+    plt.plot(iteration_list, loss_list)
+    plt.xlabel("Number of iteration")
+    plt.ylabel("Loss")
+    plt.title("Loss vs Number of iteration")
+    plt.show()
+
+    # visualization accuracy
+    plt.plot(iteration_list, accuracy_list, color="red")
+    plt.xlabel("Number of iteration")
+    plt.ylabel("Accuracy")
+    plt.title("Accuracy vs Number of iteration")
+    plt.show()
+
+
+def calc_metrics(test_label, preds):
+    classes_names = ['0', '1', '2', '3', '4']
+    num_classes = 5
+
+    plot_confusion_matrix(cm=metrics.confusion_matrix(test_label, preds),
+                          target_names=classes_names,
+                          normalize=False)
+
+    print("Accuracy:",
+          round(metrics.accuracy_score(test_label, preds), 5),
+          '\nBalanced accuracy:',
+          round(metrics.balanced_accuracy_score(test_label, preds), 5),
+          '\nMulticlass f1-score:',
+          '\n    micro:', round(metrics.f1_score(test_label, preds, average='micro'), 5),
+          '\n    macro:', round(metrics.f1_score(test_label, preds, average='macro'), 5),
+          '\n    weighted:', round(metrics.f1_score(test_label, preds, average='weighted'), 5))
+
+    print('\n\nClassification report:\n')
+    print(metrics.classification_report(test_label, preds, digits=5))

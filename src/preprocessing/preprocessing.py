@@ -19,8 +19,8 @@ class SimplePreprocessor(BaseTransformer):
         Preprocessed dataframe.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, full_joke=True):
+        self.full_joke = full_joke
 
     def _process_missing_values(
             self,
@@ -56,7 +56,10 @@ class SimplePreprocessor(BaseTransformer):
             df: pd.DataFrame,
     ) -> pd.DataFrame:
         # make full joke
-        df[S.JOKE] = df[S.TITLE] + " " + df[S.BODY]
+        if self.full_joke:
+            df[S.JOKE] = df[S.TITLE] + " " + df[S.BODY]
+        else:
+            df[S.JOKE] = df[[S.TITLE]]
         df.drop([S.TITLE, S.BODY], axis=1, inplace=True)
 
         # remove html tags
@@ -116,6 +119,7 @@ class SimplePreprocessor(BaseTransformer):
         # drop joke from one word:
         df[S.TXT_WORD_CNT] = df[S.JOKE].apply(lambda x: len(str(x).split()))
         df = df[df[S.TXT_WORD_CNT] != 1]
+        df.drop([S.TXT_WORD_CNT, S.SCORE], axis=1, inplace=True)
         return df
 
     def _fit_df(
