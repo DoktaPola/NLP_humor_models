@@ -3,6 +3,7 @@ import pandas as pd
 from typing import Dict
 import logging
 import src.utils as U
+import src.schema as S
 import src.constants as CONST
 import src.config as CONF
 from src.models.CNN_simple import CNNSimple
@@ -39,26 +40,35 @@ class Pipeline(ABC):
         self.model = None
         self.optimizer = None
 
-    def run(
+    def run_multi_classifier(
             self,
-            df: pd.DataFrame,
-    ) -> Dict[str, float]:
+            X: pd.DataFrame,
+            learning_rate,
+            criterion: object,
+            optimizer: object,
+            epochs: int = 10,
+            checkpoint_path='../checkpoints/best_checkpoint'
+    ):
         """
         Run pipeline
-        :param df: dataframe
+        :param X: dataframe
         :return recommendations: dictionary of top N catalog items for each user_id
         :return scores: scores for model performance
         """
-        # df = df.copy()
-        # log.info('Running pipeline')
-        # X_train, y_train, X_test, y_test = self.prepare_data(df)
-        # self.train_model(X_train, y_train)
-        # y_pred = self.get_prediction(X_test)
-        #
-        # log.info('Counting scores')
-        # scores = self.get_scores(np.array(y_test), np.array(y_pred))
-        # return scores
-        pass
+        df = X.copy()
+        log.info('Running multi classifier pipeline')
+        train_df, val_df, test_df = self.prepare_data(df)
+        iteration_list, loss_list, accuracy_list = self.train_model(learning_rate,
+                                                                    criterion,
+                                                                    optimizer,
+                                                                    train_df,
+                                                                    val_df,
+                                                                    epochs=epochs,
+                                                                    checkpoint_path=checkpoint_path)
+
+        self.draw_curves(iteration_list, loss_list, accuracy_list)
+        pred = self.predict(test_df, checkpoint_path=checkpoint_path)
+        self.get_scores(test_df[S.TARGET].values, pred)
 
     def train_model(self,
                     learning_rate,
@@ -145,6 +155,7 @@ class Pipeline(ABC):
         log.debug('Starting preprocessing')
         self.preprocessor.fit(df)
         df = self.preprocessor.transform(df)
+        df.drop([S.TXT_WORD_CNT], axis=1, inplace=True)
 
         log.debug('Splitting dataset on train, val and test')
         train_df, test_df = split_df(df, **self.splitting_params)

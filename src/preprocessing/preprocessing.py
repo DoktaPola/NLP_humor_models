@@ -119,7 +119,8 @@ class SimplePreprocessor(BaseTransformer):
         # drop joke from one word:
         df[S.TXT_WORD_CNT] = df[S.JOKE].apply(lambda x: len(str(x).split()))
         df = df[df[S.TXT_WORD_CNT] != 1]
-        df.drop([S.TXT_WORD_CNT, S.SCORE], axis=1, inplace=True)
+        # df.drop([S.TXT_WORD_CNT, S.SCORE], axis=1, inplace=True)
+        df.drop([S.SCORE], axis=1, inplace=True)
         return df
 
     def _fit_df(

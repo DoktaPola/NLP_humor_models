@@ -12,6 +12,11 @@ from src.plot_cm import plot_confusion_matrix
 from sklearn import metrics
 import matplotlib.pyplot as plt
 import src.config as CONF
+import random
+import time
+import datetime
+import seaborn as sns
+import pandas as pd
 
 
 # Removal of html tags
@@ -301,3 +306,164 @@ def calc_metrics(test_label, preds):
 
     print('\n\nClassification report:\n')
     print(metrics.classification_report(test_label, preds, digits=5))
+
+
+# reproducibility
+def seed_everything(seed_val):
+    random.seed(seed_val)
+    np.random.seed(seed_val)
+    torch.manual_seed(seed_val)
+    torch.cuda.manual_seed_all(seed_val)
+
+
+# train generation
+def format_time(elapsed):
+    return str(datetime.timedelta(seconds=int(round((elapsed)))))
+
+
+def train_generation(model,
+                     train_dataloader,
+                     validation_dataloader,
+                     optimizer,
+                     tokenizer,
+                     scheduler,
+                     epochs: int,
+                     device):
+    total_t0 = time.time()
+
+    training_stats = []
+
+    model = model.to(device)
+
+    for epoch_i in range(0, epochs):
+
+        print(f'Beginning epoch {epoch_i + 1} of {epochs}')
+
+        t0 = time.time()
+
+        total_train_loss = 0
+
+        model.train()
+
+        for step, batch in enumerate(train_dataloader):
+
+            b_input_ids = batch[0].to(device)
+            b_labels = batch[0].to(device)
+            b_masks = batch[1].to(device)
+
+            model.zero_grad()
+
+            outputs = model(b_input_ids,
+                            labels=b_labels,
+                            attention_mask=b_masks,
+                            token_type_ids=None
+                            )
+
+            loss = outputs[0]
+
+            batch_loss = loss.item()
+            total_train_loss += batch_loss
+
+            # Get sample every 100 batches.
+            if step % CONF.sample_every == 0 and not step == 0:
+
+                elapsed = format_time(time.time() - t0)
+                print(f'Batch {step} of {len(train_dataloader)}. Loss:{batch_loss}. Time:{elapsed}')
+
+                model.eval()
+
+                sample_outputs = model.generate(
+                    bos_token_id=random.randint(1, 30000),
+                    do_sample=True,
+                    top_k=50,
+                    max_length=200,
+                    top_p=0.95,
+                    num_return_sequences=1
+                )
+                for i, sample_output in enumerate(sample_outputs):
+                    print(f'Example output: {tokenizer.decode(sample_output, skip_special_tokens=True)}')
+
+                model.train()
+
+            loss.backward()
+
+            optimizer.step()
+
+            scheduler.step()
+
+        # Calculate the average loss over all of the batches.
+        avg_train_loss = total_train_loss / len(train_dataloader)
+
+        # Measure how long this epoch took.
+        training_time = format_time(time.time() - t0)
+
+        print(f'Average Training Loss: {avg_train_loss}. Epoch time: {training_time}')
+
+        t0 = time.time()
+
+        model.eval()
+
+        total_eval_loss = 0
+        nb_eval_steps = 0
+
+        # Evaluate data for one epoch
+        for batch in validation_dataloader:
+            b_input_ids = batch[0].to(device)
+            b_labels = batch[0].to(device)
+            b_masks = batch[1].to(device)
+
+            with torch.no_grad():
+                outputs = model(b_input_ids,
+                                attention_mask=b_masks,
+                                labels=b_labels)
+
+                loss = outputs[0]
+
+            batch_loss = loss.item()
+            total_eval_loss += batch_loss
+
+        avg_val_loss = total_eval_loss / len(validation_dataloader)
+
+        validation_time = format_time(time.time() - t0)
+
+        print(f'Validation loss: {avg_val_loss}. Validation Time: {validation_time}')
+
+        # Record all statistics from this epoch.
+        training_stats.append(
+            {
+                'epoch': epoch_i + 1,
+                'Training Loss': avg_train_loss,
+                'Valid. Loss': avg_val_loss,
+                'Training Time': training_time,
+                'Validation Time': validation_time
+            }
+        )
+
+    print(f'Total training took {format_time(time.time() - total_t0)}')
+    return training_stats
+
+
+def draw_train_val_loss(training_stats):
+    pd.set_option('precision', 2)
+    df_stats = pd.DataFrame(data=training_stats)
+    df_stats = df_stats.set_index('epoch')
+
+    # Use plot styling from seaborn.
+    sns.set(style='darkgrid')
+
+    # Increase the plot size and font size.
+    sns.set(font_scale=1.5)
+    plt.rcParams["figure.figsize"] = (12, 6)
+
+    # Plot the learning curve.
+    plt.plot(df_stats['Training Loss'], 'b-o', label="Training")
+    plt.plot(df_stats['Valid. Loss'], 'g-o', label="Validation")
+
+    # Label the plot.
+    plt.title("Training & Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.xticks([1, 2, 3, 4])
+
+    plt.show()
