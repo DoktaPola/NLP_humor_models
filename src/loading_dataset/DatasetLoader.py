@@ -1,8 +1,11 @@
 import torch
-from torch.utils.data import Dataset, DataLoader, RandomSampler
+from torch.utils.data import Dataset
 
 
 class JokeDataset(Dataset):
+    """
+    Dataset loader for joke generation.
+    """
     def __init__(self, txt_list, tokenizer, gpt2_type="gpt2", max_length=100):
         self.tokenizer = tokenizer  # the gpt2 tokenizer we instantiated
         self.input_ids = []

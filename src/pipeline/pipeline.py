@@ -22,20 +22,22 @@ class Pipeline(ABC):
                  preprocessor: BaseTransformer,
                  augmenter: BaseTransformer,
                  convertor: BaseTransformer,
-                 model_name: str,
+                 model: object,
                  splitting_params: dict = None,
                  ):
         """
-        Pipeline to unite data processing, model fitting and predictions and counting scores for it's performance
+        Pipeline to unite data processing, model training and predictions and counting scores for it's performance
 
         :param preprocessor: basic preprocessor instance
-        :param model: custom model with necessary methods: fit, set_catalog_item_train_columns, get_recommendations
+        :param augmenter: basic augmenter (synonyms imputer)
+        :param convertor: custom convertor words to vectors
+        :param model: custom model
         :param splitting_params: dict of parameters for splitting (see split_df)
         """
         self.preprocessor = preprocessor
         self.augmenter = augmenter
         self.convertor = convertor
-        self.model_name = model_name
+        self.model = model
         self.splitting_params = splitting_params
         self.model = None
         self.optimizer = None
@@ -48,12 +50,9 @@ class Pipeline(ABC):
             optimizer: object,
             epochs: int = 10,
             checkpoint_path='../checkpoints/best_checkpoint'
-    ):
+            ):
         """
-        Run pipeline
-        :param X: dataframe
-        :return recommendations: dictionary of top N catalog items for each user_id
-        :return scores: scores for model performance
+        Run pipeline.
         """
         df = X.copy()
         log.info('Running multi classifier pipeline')
@@ -84,18 +83,12 @@ class Pipeline(ABC):
                     device=CONF.DEVICE
                     ):
         """
-        Fit model
-        :param X_train:
-        :param y_train:
-        :return:
+        Train model
+        :return: data for drawing curves
         """
-        log.info('Fitting model')
-        model = None
-        if self.model_name == 'CNNSimple':
-            model = CNNSimple(n_tokens=len(self.convertor.get_tokens())).to(CONF.DEVICE)
-        elif self.model_name == 'CNNGlobalMaxPooling':
-            model = CNNGlobalMaxPooling(n_tokens=len(self.convertor.get_tokens())).to(CONF.DEVICE)
+        log.info('Training model')
 
+        model = self.model(n_tokens=len(self.convertor.get_tokens())).to(CONF.DEVICE)
         optimizer = optimizer(model.parameters(), lr=learning_rate)
 
         self.model = model
@@ -114,13 +107,21 @@ class Pipeline(ABC):
         return iteration_list, loss_list, accuracy_list
 
     def draw_curves(self, iteration_list,
-                    loss_list, accuracy_list):
+                    loss_list, accuracy_list
+                    ):
+        """
+        Visualize loss and accuracy of the model
+        """
         U.draw_visualization(iteration_list, loss_list, accuracy_list)
 
     def predict(self,
                 X: pd.DataFrame,
                 checkpoint_path='./best_checkpoint'
                 ):
+        """
+        Get classes prediction.
+        :return: classes
+        """
         log.info('Starting prediction')
         _ = U.load_checkpoint(checkpoint_path, self.model, self.optimizer)
 
@@ -129,7 +130,7 @@ class Pipeline(ABC):
         with torch.no_grad():
             for batch in U.iterate_minibatches(self.convertor, X,
                                                batch_size=128, shuffle=False,
-                                               device=CONF.DEVICE):  # batch_size=30766
+                                               device=CONF.DEVICE):
                 test_outputs = self.model(batch)
                 predicted = torch.max(test_outputs.data, 1)[1]
                 preds.extend(predicted)
@@ -146,9 +147,9 @@ class Pipeline(ABC):
                      df: pd.DataFrame,
                      ):
         """
-        Prepare data for fitting and prediction
+        Prepare data for training and prediction
         :param df: Dataframe to prepare
-        :return: four dataframes X_train, y_train, X_test, y_test
+        :return: four dataframes train_df, val_df, test_df
         """
         df = df.copy()
 
