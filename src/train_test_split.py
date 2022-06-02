@@ -1,5 +1,4 @@
 import pandas as pd
-import src.schema as S
 import src.constants as C
 from sklearn.model_selection import train_test_split
 
@@ -7,8 +6,7 @@ from sklearn.model_selection import train_test_split
 def split_df(X: pd.DataFrame,
              test_size=None,
              random_state=None,
-             shuffle=True,
-             # stratify=None
+             shuffle=True
              ):
     """
     Split dataset on train/test by user_id.
@@ -44,8 +42,7 @@ def split_df(X: pd.DataFrame,
     X_train, X_test = train_test_split(X,
                                        test_size=test_size,
                                        random_state=random_state,
-                                       shuffle=shuffle,
-                                       # stratify=stratify
+                                       shuffle=shuffle
                                        )
     X_train.reset_index(drop=True, inplace=True)
     X_test.reset_index(drop=True, inplace=True)

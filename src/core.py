@@ -29,7 +29,7 @@ class BaseTransformer(TransformerMixin, ABC):
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None):
         """
-       Common entry point for fitting transformer.
+        Common entry point for fitting transformer.
         :param X: input dataframe
         :param y: input target series
         """

@@ -6,11 +6,10 @@ import src.utils as U
 import src.schema as S
 import src.constants as CONST
 import src.config as CONF
-from src.models.CNN_simple import CNNSimple
-from src.models.CNN_global_max_pooling import CNNGlobalMaxPooling
 import torch
 from src.core import BaseTransformer
 from src.train_test_split import split_df
+from src.evaluate.metrics import calc_metrics
 
 logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s')
 log = logging.getLogger('pipeline-log')
@@ -22,7 +21,7 @@ class Pipeline(ABC):
                  preprocessor: BaseTransformer,
                  augmenter: BaseTransformer,
                  convertor: BaseTransformer,
-                 model: object,
+                 model,
                  splitting_params: dict = None,
                  ):
         """
@@ -39,7 +38,7 @@ class Pipeline(ABC):
         self.convertor = convertor
         self.model = model
         self.splitting_params = splitting_params
-        self.model = None
+        # self.model = None
         self.optimizer = None
 
     def run_multi_classifier(
@@ -87,7 +86,7 @@ class Pipeline(ABC):
         :return: data for drawing curves
         """
         log.info('Training model')
-
+        log.info(f'*** {self.model}')
         model = self.model(n_tokens=len(self.convertor.get_tokens())).to(CONF.DEVICE)
         optimizer = optimizer(model.parameters(), lr=learning_rate)
 
@@ -141,7 +140,7 @@ class Pipeline(ABC):
                    y_true,
                    y_pred
                    ):
-        U.calc_metrics(y_true, y_pred)
+        calc_metrics(y_true, y_pred)
 
     def prepare_data(self,
                      df: pd.DataFrame,
@@ -149,7 +148,7 @@ class Pipeline(ABC):
         """
         Prepare data for training and prediction
         :param df: Dataframe to prepare
-        :return: four dataframes train_df, val_df, test_df
+        :return: three dataframes train_df, val_df, test_df
         """
         df = df.copy()
 

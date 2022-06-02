@@ -29,10 +29,11 @@ class PipelineJokeGeneration(ABC):
                  splitting_params: dict = None,
                  ):
         """
-        Pipeline to unite data processing, model fitting and predictions and counting scores for it's performance
+        Pipeline to unite data processing, model training and generating text
 
         :param preprocessor: basic preprocessor instance
-        :param model: custom model with necessary methods: fit, set_catalog_item_train_columns, get_recommendations
+        :param tokenizer: basic text tokenizer
+        :param model_name: custom model
         :param splitting_params: dict of parameters for splitting (see split_df)
         """
         self.preprocessor = preprocessor
@@ -74,12 +75,9 @@ class PipelineJokeGeneration(ABC):
                     device=CONF.DEVICE
                     ):
         """
-        Fit model
-        :param X_train:
-        :param y_train:
-        :return:
+        Train model
         """
-        log.info('Fitting model')
+        log.info('Training model')
         model = None
         if self.model_name == 'GPT2':
             # Loading the model configuration and setting it to the GPT2 standard settings.
@@ -120,6 +118,9 @@ class PipelineJokeGeneration(ABC):
     def draw_curves(self,
                     training_stats
                     ):
+        """
+        Visualize loss  of the model
+        """
         U.draw_train_val_loss(training_stats)
 
     def generate(self,
@@ -139,15 +140,16 @@ class PipelineJokeGeneration(ABC):
             top_k=50,
             max_length=300,
             top_p=0.95,
-            num_return_sequences=25  # if set then no sample?
+            num_return_sequences=25
         )
 
         for i, sample_output in enumerate(sample_outputs):
             print("{}: {}\n\n".format(i, self.tokenizer.decode(sample_output, skip_special_tokens=True)))
 
     def save_model(self, output_dir):
-        # Save a trained model, configuration and tokenizer using `save_pretrained()`.
-        # They can then be reloaded using `from_pretrained()`
+        """
+        Save a trained model, configuration and tokenizer using `save_pretrained()`.
+        """
         model_to_save = self.model.module if hasattr(self.model, 'module') else self.model
         model_to_save.save_pretrained(output_dir)
         self.tokenizer.save_pretrained(output_dir)
@@ -167,9 +169,10 @@ class PipelineJokeGeneration(ABC):
                      batch_size=CONST.BATCH_SIZE_GEN,
                      ):
         """
-        Prepare data for fitting and prediction
+        Prepare data for training and text generation
         :param df: Dataframe to prepare
-        :return: four dataframes X_train, y_train, X_test, y_test
+        :param batch_size: size of one batch
+        :return: train_dataloader, validation_dataloader
         """
         df = df.copy()
 
@@ -194,7 +197,7 @@ class PipelineJokeGeneration(ABC):
 
         train_dataloader = DataLoader(
             train_df,
-            sampler=RandomSampler(train_df),  # Sampling for training is random
+            sampler=RandomSampler(train_df),
             batch_size=batch_size
         )
         validation_dataloader = DataLoader(

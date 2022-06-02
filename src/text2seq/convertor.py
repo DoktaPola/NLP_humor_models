@@ -1,15 +1,13 @@
 import pandas as pd
 import src.schema as S
 from src.core import BaseTransformer
-import numpy as np
 from collections import Counter
-import torch
 import nltk
 
 
 class Text2SeqConvertor(BaseTransformer):
     """
-
+    Convert text to tokens and then to ids.
     """
 
     def __init__(self):
@@ -26,21 +24,12 @@ class Text2SeqConvertor(BaseTransformer):
 
     def _fit_df(self, X: pd.DataFrame, y=None):
         """
-        Fit OneHotEncoder to X.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The data to determine the categories of each feature.
-
-        y : None
-            Ignored.
-
-        Returns
-        -------
-        self
-            Fitted encoder.
+         Fit tokens and get ids.
+        :param X: dataset
+        :param y:  (None) Ignored.
+        :return:  Fitted convertor.
         """
+
         tokenizer = nltk.tokenize.WordPunctTokenizer()
         X[S.JOKE] = X[[S.JOKE]].applymap(lambda x: " ".join(tokenizer.tokenize(x.lower())))
 
@@ -71,16 +60,4 @@ class Text2SeqConvertor(BaseTransformer):
     def _transform_df(self,
                       X: pd.DataFrame
                       ) -> pd.DataFrame:
-        """
-        Transform X using one-hot encoding.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The data to encode.
-
-        Returns
-        -------
-        X (DataFrame): dataset with encoded columns (original columns - dropped)
-        """
         pass

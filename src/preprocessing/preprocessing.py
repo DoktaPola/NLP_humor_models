@@ -8,14 +8,11 @@ import src.utils as U
 
 class SimplePreprocessor(BaseTransformer):
     """
-    Transformer class for short and simple requests dataset preprocessing, keeping only three features:
-    - date and time;
-    - user ID;
-    - catalog item.
+    Transformer class for short and simple requests dataset preprocessing.
 
     Returns
     -------
-    X : array-like of shape (n_samples, n_features = 3)
+    X : pd.DataFrame
         Preprocessed dataframe.
     """
 
@@ -27,7 +24,7 @@ class SimplePreprocessor(BaseTransformer):
             df: pd.DataFrame,
     ) -> pd.DataFrame:
         """
-        Process missing values
+        Process missing values.
         """
         df = df.copy()
         for col in df.columns:
@@ -39,6 +36,9 @@ class SimplePreprocessor(BaseTransformer):
             self,
             df: pd.DataFrame,
     ) -> pd.DataFrame:
+        """
+        Drop missing values.
+        """
         df.dropna(subset=[S.TITLE, S.SCORE], inplace=True)
         return df
 
@@ -46,6 +46,9 @@ class SimplePreprocessor(BaseTransformer):
             self,
             df: pd.DataFrame,
     ) -> pd.DataFrame:
+        """
+        Choose just necessary columns.
+        """
         for column in S.SHORT_PREPROCESSING_REQUIRED_COLUMNS:
             assert column in df.columns, f'Missing {column} column'
         df = df.loc[:, S.SHORT_PREPROCESSING_REQUIRED_COLUMNS]
@@ -88,6 +91,10 @@ class SimplePreprocessor(BaseTransformer):
             self,
             df: pd.DataFrame,
     ) -> pd.DataFrame:
+        """
+        If same jokes have different scores.
+        This function set the highest local score for each joke of the group.
+        """
         duplicates = df[df[S.JOKE].duplicated() == True][S.JOKE].unique()
 
         for j in duplicates:
@@ -114,6 +121,14 @@ class SimplePreprocessor(BaseTransformer):
             self,
             df: pd.DataFrame,
     ) -> pd.DataFrame:
+        """
+        Add 5 classes (target):
+        0 -> not a joke at all
+        1 -> so-so joke
+        2 -> normal joke
+        3 -> funny joke
+        4 -> the funniest joke
+        """
         df[S.TARGET] = df[S.SCORE].apply(self.__add_rank)
 
         # drop joke from one word:
