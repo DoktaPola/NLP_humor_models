@@ -1,6 +1,5 @@
 from abc import ABC
 import pandas as pd
-from typing import Dict
 import logging
 import src.utils as U
 import src.schema as S
@@ -182,4 +181,7 @@ class Pipeline(ABC):
         log.debug('Split data to train/val/test after making vocabulary')
         train_df, val_df, test_df = data[data["indic"].eq("train")], data[data["indic"].eq("val")], data[
             data["indic"].eq("test")]
+        train_df.drop(['indic'], axis=1, inplace=True)
+        val_df.drop(['indic'], axis=1, inplace=True)
+        test_df.drop(['indic'], axis=1, inplace=True)
         return train_df, val_df, test_df

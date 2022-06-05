@@ -1,4 +1,4 @@
-from src.plot_cm import plot_confusion_matrix
+from src.evaluate.plot_cm import plot_confusion_matrix
 from sklearn import metrics
 
 

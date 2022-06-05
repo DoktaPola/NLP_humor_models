@@ -1,60 +1,87 @@
 <p align="center">
   <img src="https://i.imgur.com/SPYT1zV.png" width="154">
-  <h1 align="center">Socials</h1>
-  <p align="center">A desktop application that implements <b>search, analysis, and graphical display</b> of data
-  received from users of such social networks like <b>Facebook and Vkontakte</b>.
-Implemented in Python.<p>
+  <h1 align="center">Discriminative and generative humor models</h1>
+  <p align="center">Two pipelines that implement <b>text preprocessing, augmenting, model training, and model scoring or text generation</b> of data
+  received from <b>Reddit</b>.
+Implemented in Python.</p>
   <p align="center">
 	<a href="https://www.python.org/">
-    <img src="https://img.shields.io/badge/built%20with-Python3-ff4500.svg" />
-    </a>
-	<a href="https://vk-api.readthedocs.io/en/latest/">
-    <img src="https://img.shields.io/badge/build%20with-vk_api-ffff00.svg" />
-    </a>
-    <a href="https://github.com/SeleniumHQ/selenium">
-    <img src="https://img.shields.io/badge/built%20with-Selenium-00FF00.svg" />
-    </a>
-    <a href="https://www.crummy.com/software/BeautifulSoup/bs4/doc/">
-	<img src="https://img.shields.io/badge/bulid with-bs4-ff1493.svg">
+    <img src="https://img.shields.io/badge/built%20with-Python3-C45AEC.svg" />
     </a>
     <a href="https://matplotlib.org">
-	<img src="https://img.shields.io/badge/bulid with-matplotlib-7fffd4.svg">
+	<img src="https://img.shields.io/badge/bulid with-Matplotlib-7fffd4.svg">
     </a>
-    <a href="https://networkx.github.io">
-	<img src="https://img.shields.io/badge/bulid with-networkx-ffc0cb.svg">
+    <a href="https://seaborn.pydata.org/">
+	<img src="https://img.shields.io/badge/bulid with-Seaborn-F70D1A.svg">
     </a>
-	<a href="https://pyvis.readthedocs.io/en/latest/">
-	<img src="https://img.shields.io/badge/bulid with-pyvis-8A2BE2.svg">
+    <a href="https://pytorch.org/">
+	<img src="https://img.shields.io/badge/bulid with-PyTorch-DFFF00.svg">
     </a>
-	<a href="https://www.riverbankcomputing.com/static/Docs/PyQt5/">
-	<img src="https://img.shields.io/badge/bulid with-Pyqt5-FF8C00.svg">
+    <a href="https://scikit-learn.org/">
+	<img src="https://img.shields.io/badge/bulid with-Sklearn-FD349C.svg">
+    </a>
+    <a href="https://numpy.org/doc/stable/index.html">
+	<img src="https://img.shields.io/badge/bulid with-NumPy-1589FF.svg">
+    </a>
+    <a href="https://pandas.pydata.org/">
+	<img src="https://img.shields.io/badge/bulid with-Pandas-FFFF00.svg">
+    </a>
+    <a href="https://scipy.org/">
+	<img src="https://img.shields.io/badge/bulid with-SciPy-CCCCFF.svg">
     </a>
   </p>
-</p>
 
 
 ## Table of contents
-- [How to install and run App](#installation)
-  * [Installing App](#installation)
+- [Project Structure](#structure)
+- [How to install and run Parser](#installation)
+  * [Installation](#installation)
 	* [Dependencies](#dependencies)
   * [Running App](#running)
-- [Guide](#guide)
-- [Collaborators](#collaborators)
+  
+### **Structure**
+* **checkpoints/** --> pre-trained model weights
+* **data/**
+    - jokes_dataset.csv --> raw_data
+    - aug_jokes_***.csv --> data after preprocessing and augmentation (for experiments)
+    - jokes_***.csv --> data after preprocessing (for experiments)
+* **notebooks/**
+    * **demo/**
+        * **NLP_humor_EDA.ipynb** --> exploratory data analysis of dataset
+        * **/// НАПИСААААТЬ**
+        * **/// НАПИСААААТЬ**
+    * **experiments/**
+        * **classification/**
+        * **generation/**
+        * **preproc/**
+        * **regression/**
+* **src/**
+    * **augmenting/** --> class for text augmentation
+    * **evaluate/** --> metrics for classification models
+    * **loading_dataset/** --> dataset loader for generation model
+    * **models_full_joke/** --> custom models for jokes that consist of 'title' + 'body'
+    * **pipeline/** --> pipelines to unite data processing, model training and predictions and counting scores or text generation for it's performance
+    * **preprocessing/** --> class for data preprocessing
+    * **text2seq/** --> class for text conversion into numbers
+    - **config.py**
+    - **constants.py** 
+    - **core.py** --> base class transformer
+    - **schema.py** --> contains all columns
+    - **train_test_split.py** --> class wrapper of sklearn train_test_split
+    - **utils.py** --> additional utils for different classes
+    
+## **Installation**  
+__Important:__ depending on your system, make sure to use `pip3` and `python3` instead.  
+**Environment**   
+* Python version 3.9  
+* All dependencies are mentioned in *requirements.txt*
 
-## **Installation**
 
-#### Dependencies
 
-```elm
-pip install vk_api     (v11.8+)
-pip install selenium   (v3.141)
-pip install bs4        (v0.0.1)
-pip install matplotlib (v3.1+)
-pip install networkx   (v2.3+)
-pip install pyvis      (v0.1+)
-pip install pyqt5      (v5.11+)
-```
-__Important:__ depending on your system, make sure to use `pip3` and `python3` instead.
+
+
+################################# НАПИСАТЬ
+
 
 
 #### Running
@@ -79,18 +106,6 @@ Then you will have many options to work with the collecting data.
 
 **[How to work with... ](https://drive.google.com/file/d/1uZEY3GyFS69tKOcNRcVyPe8VMq-PjWiS/view?usp=sharing ) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**
 Here you can find instruction and examples of work.
-
-
-
-### Collaborators
-
-This project exists thanks to all the people who contribute.
-<a href="https://github.com/DoktaPola/Socials/graphs/contributors" />
-
-<img style="height:auto;" alt="Avatar" width="50" height="50" class="avatar avatar-user width-full border bg-white" src="https://avatars2.githubusercontent.com/u/44429468?s=460&amp;u=4b37cd2315aaf9fd9fcfc101cc26416464ee8bf1&amp;v=4" />
-<img style="height:auto;" alt="Avatar" width="50" height="50" class="avatar avatar-user width-full border bg-white" src="https://avatars3.githubusercontent.com/u/63115848?s=460&amp;u=c41e9e8fc2822c46d396880906687fe89f5e07d9&amp;v=4" />
-<img style="height:auto;" alt="Avatar" width="50" height="50" class="avatar avatar-user width-full border bg-white" src="https://avatars2.githubusercontent.com/u/61208923?s=460&amp;v=4" />
-<img style="height:auto;" alt="Avatar" width="50" height="50" class="avatar avatar-user width-full border bg-white" src="https://avatars3.githubusercontent.com/u/55359172?s=460&amp;u=89ab963abf753c0f28b39a7c9dd51b4774f9e4fb&amp;v=4" /></a>
 
 ---
 

@@ -7,7 +7,6 @@ import numpy as np
 class Augmenter(BaseTransformer):
     """
     Class for text augmentation.
-
     """
 
     def __init__(self, augemtation_obj: object):
