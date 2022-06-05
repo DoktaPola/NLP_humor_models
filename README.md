@@ -80,7 +80,7 @@ This repository contains 2 pipelines:
 - jokes classification
 - jokes generation
 
-To run one of pipelines, see the usage **[classification demo(https://github.com/DoktaPola/NLP_humor_models/blob/main/notebooks/demo/multiclassification_pipeline.ipynb)**
+To run one of pipelines, see the usage **[classification demo](https://github.com/DoktaPola/NLP_humor_models/blob/main/notebooks/demo/multiclassification_pipeline.ipynb)**
 or **[generation demo](https://github.com/DoktaPola/NLP_humor_models/blob/main/notebooks/demo/jokes_generation_pipeline(CPU_run).ipynb)**.
 
 * First of all, all needed for pipeline instances have to be called and passed to the appropriate pipeline. 
