@@ -34,10 +34,8 @@ Implemented in Python.</p>
 
 ## Table of contents
 - [Project Structure](#structure)
-- [How to install and run Parser](#installation)
-  * [Installation](#installation)
-	* [Dependencies](#dependencies)
-  * [Running App](#running)
+- [Installation](#installation)
+- [Usage](#usage)
   
 ### **Structure**
 * **checkpoints/** --> pre-trained model weights
@@ -48,8 +46,9 @@ Implemented in Python.</p>
 * **notebooks/**
     * **demo/**
         * **NLP_humor_EDA.ipynb** --> exploratory data analysis of dataset
-        * **/// НАПИСААААТЬ**
-        * **/// НАПИСААААТЬ**
+        * **multiclassification_pipeline.ipynb** --> demo of usage multiclassification pipeline
+        * **jokes_generation_pipeline(CPU_run).ipynb** --> demo of usage jokes generation pipeline (was running on CPU)
+        * **jokes_generation(GPU_run).ipynb** --> notebook contains almost the entire pipeline code for generating jokes, but without dividing into modules(classes) and preprocessing. It was used in Google Colab to train the model on the GPU.
     * **experiments/**
         * **classification/**
         * **generation/**
@@ -70,42 +69,24 @@ Implemented in Python.</p>
     - **train_test_split.py** --> class wrapper of sklearn train_test_split
     - **utils.py** --> additional utils for different classes
     
-## **Installation**  
+### **Installation**  
 __Important:__ depending on your system, make sure to use `pip3` and `python3` instead.  
 **Environment**   
 * Python version 3.9  
 * All dependencies are mentioned in *requirements.txt*
 
+### **Usage**
+This repository contains 2 pipelines:
+- jokes classification
+- jokes generation
 
+To run one of pipelines, see the usage **[classification demo](https://github.com/DoktaPola/Socials/blob/master/main.py)**
+or **[generation demo](https://github.com/DoktaPola/Socials/blob/master/main.py)**.
 
-
-
-################################# НАПИСАТЬ
-
-
-
-#### Running
-
-To run app, you'll need to run the **[file](https://github.com/DoktaPola/Socials/blob/master/main.py)** script you've just downloaded.
-
-App has 2 modes:
-- Facebook mod
-- VKontakte mod
-
-You can put in your account details now by passing the username and password parameters to the **special form**, like so:
-```python
-username="abcd",
-password="1234"
-```
-
-App will launch the corresponding parser and start working.
-Then you will have many options to work with the collecting data.
-
-
-### Guide
-
-**[How to work with... ](https://drive.google.com/file/d/1uZEY3GyFS69tKOcNRcVyPe8VMq-PjWiS/view?usp=sharing ) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**
-Here you can find instruction and examples of work.
+* First of all, all needed for pipeline instances have to be called and passed to the appropriate pipeline. 
+* Then, prepare_data() has to be called, in order to process the dataset before training.
+* Next, call train_model().
+* And finally, predict() or generate().
 
 ---
 
